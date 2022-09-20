@@ -1,10 +1,20 @@
+<!--
+ * @Description: 
+ * @Author: sunsh
+ * @Date: 2022-09-15 16:10:10
+ * @LastEditors: sunsh
+ * @LastEditTime: 2022-09-20 12:26:56
+-->
 <script setup lang="ts">
 // This starter template is using Vue 3 <script setup> SFCs
 // Check out https://vuejs.org/api/sfc-script-setup.html#script-setup
-import HelloWorld from './components/HelloWorld.vue'
+import HelloWorld from './components/HelloWorld.vue';
 </script>
 
 <template>
+  <el-container>
+    <el-header>我是全局注册的el-header</el-header>
+  </el-container>
   <div>
     <a href="https://vitejs.dev" target="_blank">
       <img src="/vite.svg" class="logo" alt="Vite logo" />

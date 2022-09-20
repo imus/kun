@@ -1,0 +1,29 @@
+
+$namespace: 'el';
+$element-separator: '__';
+$modifier-separator: '--';
+$state-prefix: 'is-';
+
+$--header-padding: 0 20px !default;
+$--footer-padding: 0 20px !default;
+$--main-padding: 20px !default;
+
+@function getVar($name) {
+  @return $name;
+}
+
+@mixin b($block) {
+  $B: $namespace + '-' + $block !global; // el-container
+
+  .#{$B} {
+    @content;
+  }
+}
+
+@mixin when($state) {
+  @at-root {
+    &.#{$state-prefix + $state} {
+      @content;
+    }
+  }
+}

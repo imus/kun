@@ -3,20 +3,25 @@
  * @Author: sunsh
  * @Date: 2022-09-15 16:10:10
  * @LastEditors: sunsh
- * @LastEditTime: 2022-09-15 23:32:43
+ * @LastEditTime: 2022-09-20 12:10:04
 -->
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref } from 'vue';
+import ElContainer from './container/container.vue';
+import ElHeader from './container/Header.vue';
 
 // defineProps<{ msg: string }>()
 defineProps({
   msg: String
-})
+});
 
-const count = ref(0)
+const count = ref(0);
 </script>
 
 <template>
+  <el-container direction="vertical">
+    <el-header>我是el-header</el-header>
+  </el-container>
   <h1>{{ msg }}</h1>
 
   <div class="card">
