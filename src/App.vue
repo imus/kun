@@ -3,7 +3,7 @@
  * @Author: sunsh
  * @Date: 2022-09-15 16:10:10
  * @LastEditors: sunsh
- * @LastEditTime: 2022-09-20 12:26:56
+ * @LastEditTime: 2022-09-21 12:41:10
 -->
 <script setup lang="ts">
 // This starter template is using Vue 3 <script setup> SFCs
@@ -12,6 +12,7 @@ import HelloWorld from './components/HelloWorld.vue';
 </script>
 
 <template>
+  <el-button round>我是全局按钮组件</el-button>
   <el-container>
     <el-header>我是全局注册的el-header</el-header>
   </el-container>

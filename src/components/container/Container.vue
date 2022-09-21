@@ -17,7 +17,7 @@
 <script lang="ts">
 export default {
   name: 'ElContainer' // name只能通过options设置
-}
+};
 </script>
 
 <script setup lang="ts">
