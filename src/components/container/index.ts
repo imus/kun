@@ -3,7 +3,7 @@
  * @Author: sunsh
  * @Date: 2022-09-20 12:18:45
  * @LastEditors: sunsh
- * @LastEditTime: 2022-09-20 12:20:56
+ * @LastEditTime: 2022-09-22 12:58:09
  */
 import { App } from "vue";
 import ElContainer from './Container.vue';
@@ -14,4 +14,4 @@ export default {
     app.component(ElContainer.name, ElContainer);
     app.component(ElHeader.name, ElHeader);
   }
-}
+};

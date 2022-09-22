@@ -3,13 +3,14 @@
  * @Author: sunsh
  * @Date: 2022-09-15 16:10:10
  * @LastEditors: sunsh
- * @LastEditTime: 2022-09-21 12:42:36
+ * @LastEditTime: 2022-09-22 13:00:17
  */
 import { createApp } from 'vue';
 import './style.css';
 import App from './App.vue';
 import ElContainer from "./components/container";
 import ElButton from "./components/button";
+import ElForm from "./components/form";
 
 const app = createApp(App);
 app.config.globalProperties.$kun = {
@@ -19,4 +20,5 @@ app.config.globalProperties.$kun = {
 app
   .use(ElContainer)
   .use(ElButton)
+  .use(ElForm)
   .mount('#app');
