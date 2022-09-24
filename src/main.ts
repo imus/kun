@@ -3,7 +3,7 @@
  * @Author: sunsh
  * @Date: 2022-09-15 16:10:10
  * @LastEditors: sunsh
- * @LastEditTime: 2022-09-22 13:00:17
+ * @LastEditTime: 2022-09-22 18:00:59
  */
 import { createApp } from 'vue';
 import './style.css';
