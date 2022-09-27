@@ -3,10 +3,10 @@
  * @Author: sunsh
  * @Date: 2022-09-27 10:48:01
  * @LastEditors: sunsh
- * @LastEditTime: 2022-09-27 19:10:49
+ * @LastEditTime: 2022-09-27 19:39:21
  */
 let origin = {
-  foo: 'foo',
+  foo: 1,
   condition: false
 }
 
@@ -63,8 +63,14 @@ function trigger(target, key, receiver) {
   //   fn();
   // });
 
-  const effectFnCopy = new Set(bucket.get(target)?.get(key));
-  effectFnCopy.forEach(effectFn => effectFn()); // 此时count 为0 1 2 ，不再是0123，去除了之前origin.condition为true时，收集的多余副作用
+  const effectFnCopy = new Set();
+  // 可以用.has判断，防止调用当前正在执行的effect: 递归调用
+  bucket.get(target)?.get(key).forEach(effectFn => {
+    if (effectFn !== activeEffect) {
+      effectFnCopy.add(effectFn);
+    }
+  }); // effect中正在执行cb回调activeEffect还是当前的effectFn
+  effectFnCopy.forEach(effectFn => effectFn());
 }
 
 origin = new Proxy(origin, {
@@ -84,15 +90,7 @@ origin = new Proxy(origin, {
   }
 });
 
-// effect嵌套执行导致activeEffect为内层的fn, 且无法恢复。解决办法：调用栈，入栈再出栈activeEffect始终指定栈顶
 let temp, temp1;
 effect(() => {
-  console.log('ha');
-  effect(() => {
-    console.log('wo');
-    temp1 = origin.foo;
-  });
-  temp = origin.condition;
+  origin.foo++; // 等价于origin.foo = origin.foo + 1; // 触发get的同时触发set
 });
-
-origin.condition = false; // 打印了两次wo, 因为内层effect修改activeEffect之后没有恢复
