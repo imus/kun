@@ -3,10 +3,11 @@
  * @Author: sunsh
  * @Date: 2022-09-27 10:48:01
  * @LastEditors: sunsh
- * @LastEditTime: 2022-09-27 17:49:16
+ * @LastEditTime: 2022-09-27 19:10:49
  */
 let origin = {
-  foo: 'foo'
+  foo: 'foo',
+  condition: false
 }
 
 function cleanUp(effectFn) {
@@ -16,12 +17,19 @@ function cleanUp(effectFn) {
 
 // 用于注册副作用的函数, 解决副作用函数名字硬编码
 let activeEffect;
+let effectStack = [];
+
 function effect(cb) {
+  // 这个函数的封装就为了添加.deps依赖
   const effectFn = () => {
     // trigger中执行的是该函数, 执行的时候会重新收集。
     cleanUp(effectFn);
     activeEffect = effectFn;
-    cb();
+    
+    effectStack.push(effectFn);
+    cb(); // cb里面有effect就可能修改activeEffect,用调用栈解决
+    effectStack.pop();
+    activeEffect = effectStack[effectStack.length - 1];
   }
   // 用来存储所有与该副作用函数相关联的依赖集合, effectFn所在的所有set集合
   effectFn.deps = [];
@@ -76,22 +84,15 @@ origin = new Proxy(origin, {
   }
 });
 
+// effect嵌套执行导致activeEffect为内层的fn, 且无法恢复。解决办法：调用栈，入栈再出栈activeEffect始终指定栈顶
+let temp, temp1;
+effect(() => {
+  console.log('ha');
+  effect(() => {
+    console.log('wo');
+    temp1 = origin.foo;
+  });
+  temp = origin.condition;
+});
 
-let count = 0;
-function handler1() {
-  console.log(count++);
-  document.getElementById("app").innerText = origin.condition ? origin.foo: "constant"
-}
-effect(handler1);
-
-setTimeout(() => {
-  /* NOTE 第1次执行effect时，收集了condition的依赖一次， target为{foo：xxx}, 还没有condition属性。handler1第一次执行。
-    动态添加的属性, 执行set时，target为同一个对象，会执行fn。 handler1第二次执行。
-    此时，condition存在，foo存在，收集了各自的一次依赖。condition -> fn, foo -> fn
-  */
-  origin.condition = 'reactive';
-  // 此时false, handler1中不会读取origin.foo了，但最后修改foo属性仍执行handler1了，可以执行但完全没必要。如何解决呢？
-  // 先删除所有副作用函数，怎么删除呢？在副作用函数中保存相关联的key。
-  origin.condition = false;
-  origin.foo = "又要执行不必要的effect了。"
-}, 1000);
+origin.condition = false; // 打印了两次wo, 因为内层effect修改activeEffect之后没有恢复
