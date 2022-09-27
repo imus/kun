@@ -3,7 +3,7 @@
  * @Author: sunsh
  * @Date: 2022-09-27 10:48:01
  * @LastEditors: sunsh
- * @LastEditTime: 2022-09-27 23:25:02
+ * @LastEditTime: 2022-09-27 23:43:06
  */
 let origin = {
   foo: 1,
@@ -98,14 +98,39 @@ origin = new Proxy(origin, {
 });
 
 // 调度器就是执行副作用函数的：可以控制顺序
+let jobsQueue = new Set();
+let p = Promise.resolve();
+let flushing = false;
+function flushJob() {
+  if (flushing) {
+    return;
+  }
+
+  flushing = true; // 用一个标志，控制后续的执行1次
+
+  p.then(() => { // 延迟到同步执行完毕执行一次
+    jobsQueue.forEach(job => job());
+  }).finally(() => {
+    flushing = false;
+  });
+}
+
+
 let temp, temp1;
 effect(() => {
   console.log(origin.foo);
 }, {
   scheduler: function(cb) {
-    Promise.resolve().then(cb); // 后调用
+    // 改进：支持控制调用次数
+    jobsQueue.add(cb);
+    flushJob();
   }
 });
 
 origin.foo++;
 console.log('sync'); // 1, sync, 2
+
+// 还可以控制执行次数, 由于scheduler中是异步调用cb, 所以目前还不行
+while(origin.foo < 1000) {
+  origin.foo++; //最终打印了999次值1000
+}
