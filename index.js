@@ -3,7 +3,7 @@
  * @Author: sunsh
  * @Date: 2022-09-27 10:48:01
  * @LastEditors: sunsh
- * @LastEditTime: 2022-09-27 19:39:21
+ * @LastEditTime: 2022-09-27 23:25:02
  */
 let origin = {
   foo: 1,
@@ -19,7 +19,7 @@ function cleanUp(effectFn) {
 let activeEffect;
 let effectStack = [];
 
-function effect(cb) {
+function effect(cb, options = {}) {
   // 这个函数的封装就为了添加.deps依赖
   const effectFn = () => {
     // trigger中执行的是该函数, 执行的时候会重新收集。
@@ -33,6 +33,7 @@ function effect(cb) {
   }
   // 用来存储所有与该副作用函数相关联的依赖集合, effectFn所在的所有set集合
   effectFn.deps = [];
+  effectFn.options = options; // 在cb() 应该判断scheduler存在与否，然后执行应该也可以
   effectFn();
 }
 
@@ -70,7 +71,13 @@ function trigger(target, key, receiver) {
       effectFnCopy.add(effectFn);
     }
   }); // effect中正在执行cb回调activeEffect还是当前的effectFn
-  effectFnCopy.forEach(effectFn => effectFn());
+  effectFnCopy.forEach(effectFn => {
+    if (effectFn.options.scheduler) {
+      effectFn.options.scheduler(effectFn);
+    } else {
+      effectFn();
+    }
+  });
 }
 
 origin = new Proxy(origin, {
@@ -90,7 +97,15 @@ origin = new Proxy(origin, {
   }
 });
 
+// 调度器就是执行副作用函数的：可以控制顺序
 let temp, temp1;
 effect(() => {
-  origin.foo++; // 等价于origin.foo = origin.foo + 1; // 触发get的同时触发set
+  console.log(origin.foo);
+}, {
+  scheduler: function(cb) {
+    Promise.resolve().then(cb); // 后调用
+  }
 });
+
+origin.foo++;
+console.log('sync'); // 1, sync, 2
