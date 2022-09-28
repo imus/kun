@@ -3,13 +3,14 @@
  * @Author: sunsh
  * @Date: 2022-09-27 10:48:01
  * @LastEditors: sunsh
- * @LastEditTime: 2022-09-27 23:43:06
+ * @LastEditTime: 2022-09-28 11:57:58
  */
 let origin = {
   foo: 1,
   condition: false
 }
 
+// 为了处理？：情况下副作用遗留的问题
 function cleanUp(effectFn) {
   effectFn.deps.forEach(set => set.delete(effectFn));
   effectFn.deps.length = 0;
@@ -27,14 +28,20 @@ function effect(cb, options = {}) {
     activeEffect = effectFn;
     
     effectStack.push(effectFn);
-    cb(); // cb里面有effect就可能修改activeEffect,用调用栈解决
+    let res = cb(); // cb里面有effect就可能修改activeEffect,用调用栈解决
     effectStack.pop();
     activeEffect = effectStack[effectStack.length - 1];
+
+    return res;
   }
   // 用来存储所有与该副作用函数相关联的依赖集合, effectFn所在的所有set集合
   effectFn.deps = [];
   effectFn.options = options; // 在cb() 应该判断scheduler存在与否，然后执行应该也可以
-  effectFn();
+  if (options.lazy) {
+    return effectFn; // 让用户控制
+  } else {
+    effectFn();
+  }
 }
 
 // 依赖集合的数据结构
@@ -116,7 +123,7 @@ function flushJob() {
 }
 
 
-let temp, temp1;
+/* let temp, temp1;
 effect(() => {
   console.log(origin.foo);
 }, {
@@ -133,4 +140,52 @@ console.log('sync'); // 1, sync, 2
 // 还可以控制执行次数, 由于scheduler中是异步调用cb, 所以目前还不行
 while(origin.foo < 1000) {
   origin.foo++; //最终打印了999次值1000
+} */
+
+// 计算属性: TODO 也可以接受setter
+// 实现：1.要求返回一个ref是getter的值 2：getter能在依赖变化时返回值??? 把getter作为effect的回调传入，注册一个副作用函数
+function computed(getter) {
+  // NOTE2 如何缓存值呢？多次访问计算属性结果不变不执行effectFn
+  let dirty = true; // 数据需要计算
+  let value;
+
+  const effectFn = effect(getter, {
+    lazy: true, // 要求effect不能一上来就执行内部的副作用函数
+    scheduler(cb) {
+      if(!dirty) {
+        dirty = true; // 数据变化会执行scheduler
+        trigger(ref, 'value');
+      }
+      
+    }
+  });
+
+  const ref = {
+    get value() {
+      if (dirty) {
+        value = effectFn();
+        dirty = false; // 缓存，如何变化时重新开启呢？scheduler中
+      }
+      track(ref, 'value'); // 手动收集依赖
+      return value;
+    }
+  }
+
+  return ref;
 }
+
+const comp = computed(() => {
+  return origin.foo + 1; // 读取comp.value时才被收集为依赖
+});
+console.log(comp.value); // 2
+console.log(comp.value); // 2，如果没有缓存则会多次执行effectFn,因此需要添加缓存通过dirty实现
+origin.foo++;
+console.log(comp.value); // 3
+// NOTE1 以上知识懒计算
+
+
+// NOTE3 特殊情况：effect依赖计算属性
+effect(() => {
+  console.log(comp.value); // 在computed ref 的get中手动收集依赖
+});
+origin.foo = 4; // 期望effect执行，在computed 中track手动触发依赖
