@@ -3,7 +3,7 @@
  * @Author: sunsh
  * @Date: 2022-09-27 10:48:01
  * @LastEditors: sunsh
- * @LastEditTime: 2022-09-28 13:36:23
+ * @LastEditTime: 2022-09-28 16:21:06
  */
 let origin = {
   foo: 1,
@@ -193,26 +193,38 @@ origin.foo = 4; // 期望effect执行，在computed 中track手动触发依赖
 
 /* watch的实现 */
 // 只能观测到foo属性，怎么观测到所有属性呢? traverse遍历
-function watch(obj, cb) {
+function watch(obj, cb, options) {
   let getter;
   if (typeof obj === 'function') {
     getter = obj;
   } else {
-    getter = () => traverse(obj);
+    getter = () => traverse(obj); // 访问对象的所有属性用于依赖收集
   }
 
   let newValue, oldValue;
+  let scheduler = function() {
+    newValue = effectFn();
+    cb(newValue, oldValue);
+    oldValue = newValue;
+  }
+
   const effectFn = effect(() => {
     // console.log(obj.foo); // 硬编码了
     return getter();
   }, {
     lazy: true,
-    scheduler: function() {
-      newValue = effectFn();
-      cb(newValue, oldValue);
-      oldValue = newValue;
+    scheduler: () => {
+      if (options.flush === 'post') {
+        Promise.resolve().then(scheduler);
+      } else {
+        scheduler(); // 'sync'
+      }
     }
   });
+
+  if (options.immediate) { // 需要立即执行回调，就是执行scheduler
+    scheduler();
+  }
 
   oldValue = effectFn();
 }
@@ -233,5 +245,9 @@ function traverse(target, seen = new Set()) {
 
 watch(origin, () => {
   console.log('origin变化了');
+}, {
+  immediate: true, // 回调立即执行一次
+  flush: 'post', // scheduler的调度时机, （默认）sync立即调度，pre\post组件更新前后
 });
 origin.condition = 1;
+
