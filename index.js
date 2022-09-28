@@ -3,7 +3,7 @@
  * @Author: sunsh
  * @Date: 2022-09-27 10:48:01
  * @LastEditors: sunsh
- * @LastEditTime: 2022-09-28 16:21:06
+ * @LastEditTime: 2022-09-28 16:46:03
  */
 let origin = {
   foo: 1,
@@ -193,7 +193,7 @@ origin.foo = 4; // 期望effect执行，在computed 中track手动触发依赖
 
 /* watch的实现 */
 // 只能观测到foo属性，怎么观测到所有属性呢? traverse遍历
-function watch(obj, cb, options) {
+function watch(obj, cb, options = {}) {
   let getter;
   if (typeof obj === 'function') {
     getter = obj;
@@ -201,10 +201,16 @@ function watch(obj, cb, options) {
     getter = () => traverse(obj); // 访问对象的所有属性用于依赖收集
   }
 
+  let cleanup;
+  function onCleanUpEffect(cleanupCb) {
+    cleanup = cleanupCb;
+  }
+
   let newValue, oldValue;
   let scheduler = function() {
+    cleanup?.();
     newValue = effectFn();
-    cb(newValue, oldValue);
+    cb(newValue, oldValue, onCleanUpEffect);
     oldValue = newValue;
   }
 
@@ -251,3 +257,22 @@ watch(origin, () => {
 });
 origin.condition = 1;
 
+
+/* watch 回调的第三个参数：清理过期的副作用函数 */
+// 执行2次请求：请求1过期了后回来，请求2先回来，不能让请求1的结果覆盖请求2的结果
+watch(origin, async (newValue, oldValue, onCleanUpEffect) => {
+  
+  let expired = false;
+    // 注册一个过期回调, 在cb中注册的本次注册下次执行才能用到
+  onCleanUpEffect(() => { 
+    expired = true;
+  })
+
+  // 发送网络请求
+  const res = await fetch('/path/to/request')
+
+  // 只有当该副作用函数的执行没有过期时，才会执行后续操作。
+  if (!expired) {
+    finalData = res
+  }
+})
