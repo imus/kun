@@ -3,7 +3,7 @@
  * @Author: sunsh
  * @Date: 2022-09-27 10:48:01
  * @LastEditors: sunsh
- * @LastEditTime: 2022-09-28 11:57:58
+ * @LastEditTime: 2022-09-28 13:36:23
  */
 let origin = {
   foo: 1,
@@ -189,3 +189,49 @@ effect(() => {
   console.log(comp.value); // 在computed ref 的get中手动收集依赖
 });
 origin.foo = 4; // 期望effect执行，在computed 中track手动触发依赖
+
+
+/* watch的实现 */
+// 只能观测到foo属性，怎么观测到所有属性呢? traverse遍历
+function watch(obj, cb) {
+  let getter;
+  if (typeof obj === 'function') {
+    getter = obj;
+  } else {
+    getter = () => traverse(obj);
+  }
+
+  let newValue, oldValue;
+  const effectFn = effect(() => {
+    // console.log(obj.foo); // 硬编码了
+    return getter();
+  }, {
+    lazy: true,
+    scheduler: function() {
+      newValue = effectFn();
+      cb(newValue, oldValue);
+      oldValue = newValue;
+    }
+  });
+
+  oldValue = effectFn();
+}
+
+function traverse(target, seen = new Set()) {
+  if (!typeof target === 'object' || target == null || seen.has(target)/* 避免循环引用 */) {
+    return;
+  }
+
+  seen.add(target);
+
+  for (const key in target) {
+    traverse(target[key], seen);
+  }
+
+  return target;
+}
+
+watch(origin, () => {
+  console.log('origin变化了');
+});
+origin.condition = 1;
